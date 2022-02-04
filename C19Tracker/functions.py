@@ -6,14 +6,20 @@ from plotly.offline import iplot
 import plotly.graph_objs as go
 import plotly.express as px
 import json 
-from streamlit.script_runner import StopException, RerunException
 import datetime
 from collections import defaultdict
 import pickle5
 import pickle
 import os
 import warnings
+from IPython.display import Markdown as md
 from pytz import timezone
+from copy import deepcopy
+
+#Get the current file's directory
+path = os.path.dirname(__file__)
+#Create cache's filepath
+filepath = os.path.join(path, 'data/cache_final.p')
 
 def get_dates_till_today(start_date):
   return pd.date_range(end=datetime.datetime.today(), start=start_date).strftime('%Y-%m-%d').tolist()
@@ -30,7 +36,7 @@ def get_region_report(region_name, date, df):
                 'region_name': region_name, 'date': date}, headers=headers)
   response_json = json.loads(response.text)
 
-  if len(response_json) > 0:
+  if len(response_json) > 0 and 'data' in response_json:
     return response_json['data']
 
   return []
@@ -46,7 +52,7 @@ def get_worldwide_data(date):
     #json.loads(response.text)['data']
     response_json = json.loads(response.text)
 
-    if len(response_json) > 0:
+    if len(response_json) > 0 and 'data' in response_json:
       return response_json['data']
 
     return []
@@ -62,7 +68,7 @@ def get_latest_worldwide_data():
     #json.loads(response.text)['data']
     response_json = json.loads(response.text)
 
-    if len(response_json) > 0:
+    if len(response_json) > 0 and 'data' in response_json:
       return response_json['data']
 
     return []
@@ -89,8 +95,9 @@ def get_countries_data(dates, regions, df_regions):
   glob_data = defaultdict(list)
   for date in dates:
     data = get_worldwide_data(date)
-    glob_data['global_conf_diff'].append(data['confirmed_diff'])
-    glob_data['global_deaths_diff'].append(data['deaths_diff'])
+    if len(data)>0:
+      glob_data['global_conf_diff'].append(data['confirmed_diff'])
+      glob_data['global_deaths_diff'].append(data['deaths_diff'])
 
   result['global_conf_diff'] = np.array(glob_data['global_conf_diff'])
   result['global_deaths_diff'] = np.array(glob_data['global_deaths_diff'])
@@ -117,7 +124,7 @@ def get_optimized_regions_data(data, regions):
   return result.copy()
 
 def update_cached_data(data, new_data, regions):
-  old_data = data.copy()
+  old_data = dict(data)
   for rgn in regions:
     old_data[rgn]['confirmed_diff'] = np.append(old_data[rgn]['confirmed_diff'][:-1], 
     new_data[rgn]['confirmed_diff'])
@@ -133,18 +140,18 @@ def update_cached_data(data, new_data, regions):
 
 def cache_data(data, latest_date, regions, df_regions):
     time1 = datetime.datetime.strptime(datetime.datetime.now(timezone('Canada/Eastern')).strftime('%Y-%m-%d'), '%Y-%m-%d')
-    if time1 > (latest_date + datetime.timedelta(days=10)):
+    if time1 > (latest_date + datetime.timedelta(days=1)):
         new_dates = get_dates_till_today(latest_date)
         #Remove today's date from the dates to be cached
         new_dates.pop(-1)
         if len(new_dates)>0:
             new_data = get_countries_data(new_dates, regions, df_regions)
             #Update the data
-            #Debugging !!!!
-            st.write("Caching the data!!!")
 
             temp = update_cached_data(data, new_data, regions)
             data = get_optimized_regions_data(temp, regions)
             #Cache the new data
             with open(filepath, 'wb') as fp:
                 pickle.dump(data, fp, protocol=pickle.HIGHEST_PROTOCOL)
+    
+    return data
