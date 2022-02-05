@@ -18,7 +18,6 @@ from copy import deepcopy
 from streamlit.script_runner import RerunException, StopException
 from functions import *
 
-warnings.filterwarnings('ignore')
 #Get the current file's directory
 path = os.path.dirname(__file__)
 #Create cache's filepath

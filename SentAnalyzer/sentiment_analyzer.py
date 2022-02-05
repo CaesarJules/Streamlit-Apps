@@ -12,10 +12,11 @@ import os
 import matplotlib.pyplot as plt
 from functions import *
 
-st.set_page_config(layout="wide")
 #Get the current file's directory
 path = os.path.dirname(__file__)
 filepath = os.path.join(path, 'data/sample_webapp_test.csv')
+logo = os.path.join(path, 'data/logo.png')
+st.set_page_config(page_title='Reviews Pundit', page_icon = logo, layout = 'wide', initial_sidebar_state = 'auto')
 
 fig = go.Figure()
 st.title("Reviews Pundit")
@@ -41,13 +42,15 @@ col2, col3 = st.columns((2,1))
 
 sample = col2.empty()
 sample.selectbox(label = "", options=["", "Amazon PC reviews sample"], key="sample_id")
-
+txt_input = False
+if st.session_state["sample_id"]!="":
+    txt_input = True
 st.sidebar.write("# Customer Product Review(s)")
 st.sidebar.text("")
 st.sidebar.text("")
 with st.sidebar:
     with st.form("myform", clear_on_submit=True):
-        single_review = st.text_area(label="Please enter below a product review:", key="txt_id")
+        single_review = st.text_area(label="Please enter below a product review:", key="txt_id", disabled=txt_input)
         st.write("# Or")
         uploaded_file = st.file_uploader(label="Upload your input reviews CSV file", key="fl_id",
         type=["csv"])
